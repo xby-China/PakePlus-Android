@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>饮食记录</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif}
+body{background:#fcf6ef;color:#333;padding-bottom:80px}
+:root{--main:#ff7b39;--light:#fff2e9;--green:#38a169;--gray:#999;--card:#ffffff}
+.tab-bar{position:fixed;bottom:0;left:0;right:0;height:70px;background:#fff;display:flex;align-items:center;justify-content:space-around;border-top:1px solid #eee;z-index:99}
+.tab-item{text-align:center;color:#999;font-size:14px}
+.tab-item.active{color:var(--main)}
+.page{display:none;padding:16px}
+.page.active{display:block}
+.card{background:var(--card);border-radius:18px;padding:18px;margin-bottom:16px;box-shadow:0 2px 10px #00000008}
+.circle-wrap{display:flex;align-items:center;gap:20px;margin-bottom:10px}
+.circle{width:140px;height:140px;position:relative}
+.circle svg{width:140px;height:140px;transform:rotate(-90deg)}
+.circle-text{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+.circle-text .val{font-size:34px;font-weight:bold}
+.circle-text .unit{font-size:14px;color:#666}
+.info-row{display:flex;justify-content:space-between;margin:6px 0;font-size:16px}
+.remain-tip{background:var(--light);color:var(--main);padding:8px 14px;border-radius:12px;text-align:center;margin-top:10px;font-weight:500}
+.progress-row{margin:14px 0}
+.progress-label{display:flex;justify-content:space-between;margin-bottom:4px;font-size:15px}
+.progress-bg{height:10px;background:#f0f0f0;border-radius:99px;overflow:hidden}
+.progress-bar{height:100%;border-radius:99px;transition:0.3s}
+.bar-pro{background:var(--green)}
+.bar-carb{background:#4299e1}
+.bar-fat{background:#9f7aea}
+.meal-title{font-size:17px;font-weight:500;margin:16px 0 8px;display:flex;justify-content:space-between}
+.food-item{border:1px solid #f3ede6;border-radius:14px;padding:14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:flex-start}
+.food-name{font-size:16px;font-weight:500}
+.food-nut{font-size:14px;color:#666;margin-top:4px}
+.food-kcal{color:var(--main);font-weight:bold;font-size:20px}
+.del-btn{color:#999;padding:2px 6px}
+.add-btn{position:fixed;bottom:84px;right:20px;width:140px;height:52px;background:var(--main);color:#fff;border:none;border-radius:99px;font-size:18px;box-shadow:0 4px 14px #ff7b3944;z-index:90}
+.form-item{margin:12px 0}
+.form-item label{display:block;margin-bottom:6px;font-size:15px}
+.form-item input,select{width:100%;padding:12px;border:1px solid #e2e2e2;border-radius:12px;font-size:16px}
+.btns{display:flex;gap:10px;margin-top:16px}
+button{padding:12px;border:none;border-radius:12px;font-size:16px}
+.btn-primary{background:var(--main);color:#fff}
+.btn-gray{background:#eee;color:#333}
+.chart-box{height:260px;padding:10px}
+</style>
+</head>
+<body>
+<div class="page active" id="page-today">
+  <div class="card">
+    <div class="circle-wrap">
+      <div class="circle">
+        <svg viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="44" fill="none" stroke="#f3ede6" stroke-width="8"/>
+          <circle id="circle-progress" cx="50" cy="50" r="44" fill="none" stroke="#ff7b39" stroke-width="8" stroke-linecap="round" stroke-dasharray="276.46" stroke-dashoffset="276.46"/>
+        </svg>
+        <div class="circle-text">
+          <div class="val" id="eat-kcal">0</div>
+          <div class="unit">kcal 已摄入</div>
+        </div>
+      </div>
+      <div class="circle-info">
+        <div class="info-row"><span>每日目标</span><span id="target-kcal">2000 kcal</span></div>
+        <div class="info-row"><span>达成率</span><span id="rate-text">0%</span></div>
+        <div class="info-row"><span>剩余</span><span id="left-kcal">2000 kcal</span></div>
+        <div class="remain-tip" id="tip-text">还可以摄入 2000 kcal</div>
+      </div>
+    </div>
+    <div class="progress-row">
+      <div class="progress-label"><span>蛋白质</span><span id="pro-text">0 / 120 g</span></div>
+      <div class="progress-bg"><div class="progress-bar bar-pro" id="pro-bar" style="width:0%"></div></div>
+    </div>
+    <div class="progress-row">
+      <div class="progress-label"><span>碳水</span><span id="carb-text">0 / 250 g</span></div>
+      <div class="progress-bg"><div class="progress-bar bar-carb" id="carb-bar" style="width:0%"></div></div>
+    </div>
+    <div class="progress-row">
+      <div class="progress-label"><span>脂肪</span><span id="fat-text">0 / 70 g</span></div>
+      <div class="progress-bg"><div class="progress-bar bar-fat" id="fat-bar" style="width:0%"></div></div>
+    </div>
+  </div>
+  <div id="meal-container"></div>
+</div>
+<div class="page" id="page-stat">
+  <div class="card">
+    <h3>体重趋势</h3>
+    <div class="chart-box"><canvas id="weightChart"></canvas></div>
+  </div>
+  <div class="card">
+    <h3>历史记录</h3>
+    <div id="history-list"></div>
+  </div>
+</div>
+<div class="page" id="page-setting">
+  <div class="card">
+    <h3>基础信息（自动算TDEE）</h3>
+    <div class="form-item">
+      <label>性别</label>
+      <select id="sex">
+        <option value="male">男</option>
+        <option value="female">女</option>
+      </select>
+    </div>
+    <div class="form-item"><label>身高 cm</label><input id="height" type="number" value="170"></div>
+    <div class="form-item"><label>年龄</label><input id="age" type="number" value="24"></div>
+    <div class="form-item">
+      <label>活动系数</label>
+      <select id="activity">
+        <option value="1.2">久坐（几乎不运动）1.2</option>
+        <option value="1.375">轻度活动（每周1-3次）1.375</option>
+        <option value="1.55">中度活动（每周3-5次）1.55</option>
+        <option value="1.725">高强度（每周6-7次）1.725</option>
+      </select>
+    </div>
+    <div class="form-item"><label>蛋白质目标 g/kg</label><input id="pro-per-kg" type="number" value="1.6"></div>
+    <div class="btns"><button class="btn-primary" onclick="calcTDEE()">自动计算目标热量</button></div>
+  </div>
+  <div class="card">
+    <h3>手动设置目标</h3>
+    <div class="form-item"><label>每日热量目标 kcal</label><input id="manual-target" type="number" value="2000"></div>
+    <div class="form-item"><label>碳水目标 g</label><input id="carb-target" type="number" value="250"></div>
+    <div class="form-item"><label>脂肪目标 g</label><input id="fat-target" type="number" value="70"></div>
+    <div class="btns"><button class="btn-primary" onclick="saveManualTarget()">保存手动目标</button></div>
+  </div>
+  <div class="card">
+    <h3>今日体重记录</h3>
+    <div class="form-item"><label>体重 kg</label><input id="today-weight" type="number" step="0.1"></div>
+    <div class="btns"><button class="btn-primary" onclick="saveWeight()">保存今日体重</button></div>
+  </div>
+  <div class="card">
+    <h3>数据管理</h3>
+    <div class="btns">
+      <button class="btn-gray" onclick="exportCSV()">导出CSV</button>
+      <button class="btn-gray" onclick="clearAll()">清空全部数据</button>
+    </div>
+  </div>
+</div>
+
+<div style="display:none;padding:16px;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:100;overflow:auto" id="addModal">
+  <div style="background:#fff;border-radius:20px;padding:20px;margin-top:40px">
+    <h3>+ 添加食物</h3>
+    <div class="form-item">
+      <label>餐次</label>
+      <select id="meal-type">
+        <option value="breakfast">早餐</option>
+        <option value="lunch">午餐</option>
+        <option value="dinner">晚餐</option>
+        <option value="snack">加餐</option>
+      </select>
+    </div>
+    <div class="form-item"><label>食物名称</label><input id="food-name" placeholder="输入名称自动匹配营养库"></div>
+    <div class="form-item"><label>重量 g</label><input id="food-w" type="number" step="1"></div>
+    <div class="form-item"><label>蛋白质 g /100g</label><input id="food-pro" type="number" step="0.1"></div>
+    <div class="form-item"><label>碳水 g /100g</label><input id="food-carb" type="number" step="0.1"></div>
+    <div class="form-item"><label>脂肪 g /100g</label><input id="food-fat" type="number" step="0.1"></div>
+    <div class="btns">
+      <button class="btn-gray" onclick="closeModal()">取消</button>
+      <button class="btn-primary" onclick="addFood()">保存</button>
+    </div>
+  </div>
+</div>
+<button class="add-btn" onclick="openModal()">+ 记一餐</button>
+<div class="tab-bar">
+  <div class="tab-item active" data-page="today">今日</div>
+  <div class="tab-item" data-page="stat">统计</div>
+  <div class="tab-item" data-page="setting">我的</div>
+</div>
+
+<script>
+// 食物库（每100g营养）
+const foodLib = {
+  "米饭":{pro:2.6,carb:28,fat:0.3,kcal:116},
+  "鸡蛋":{pro:13,carb:1.1,fat:8.8,kcal:143},
+  "牛肉":{pro:21,carb:0,fat:4.2,kcal:125},
+  "鸡胸肉":{pro:23,carb:0,fat:1,kcal:110},
+  "牛奶":{pro:3.2,carb:4.8,fat:3.8,kcal:62},
+  "燕麦":{pro:13,carb:60,fat:7,kcal:389},
+  "红薯":{pro:1.6,carb:20,fat:0.1,kcal:86},
+  "豆腐":{pro:8,carb:2,fat:3.5,kcal:70},
+  "面条":{pro:7,carb:25,fat:0.5,kcal:112},
+  "白吉饼":{pro:7,carb:50,fat:1,kcal:230}
+}
+let appData = JSON.parse(localStorage.getItem("dietData")) || {
+  info:{sex:"male",height:170,age:24,activity:1.375,proPerKg:1.6},
+  target:{kcal:2000,pro:120,carb:250,fat:70},
+  weightList:[],
+  dayRecords:{}
+}
+let today = new Date().toISOString().split("T")[0]
+let chart
+// 切换tab
+document.querySelectorAll(".tab-item").forEach(t=>{
+  t.onclick = ()=>{
+    document.querySelectorAll(".tab-item").forEach(i=>i.classList.remove("active"))
+    t.classList.add("active")
+    const pid = t.dataset.page
+    document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"))
+    document.getElementById("page-"+pid).classList.add("active")
+    if(pid==="stat") renderWeightChart()
+  }
+})
+// 打开关闭弹窗
+function openModal(){document.getElementById("addModal").style.display="block"}
+function closeModal(){document.getElementById("addModal").style.display="none"}
+// 输入食物名自动匹配库
+document.getElementById("food-name").oninput = function(){
+  const n = this.value.trim()
+  if(foodLib[n]){
+    const item = foodLib[n]
+    document.getElementById("food-pro").value=item.pro
+    document.getElementById("food-carb").value=item.carb
+    document.getElementById("food-fat").value=item.fat
+  }
+}
+function addFood(){
+  const type = document.getElementById("meal-type").value
+  const name = document.getElementById("food-name").value.trim()
+  const w = Number(document.getElementById("food-w").value)||0
+  const p100 = Number(document.getElementById("food-pro").value)||0
+  const c100 = Number(document.getElementById("food-carb").value)||0
+  const f100 = Number(document.getElementById("food-fat").value)||0
+  const kcal100 = p100*4 + c100*4 + f100*9
+  const food = {
+    id:Date.now(),
+    type,name,weight:w,
+    pro:p100*w/100,
+    carb:c100*w/100,
+    fat:f100*w/100,
+    kcal:kcal100*w/100
+  }
+  if(!appData.dayRecords[today]) appData.dayRecords[today] = {foods:[]}
+  appData.dayRecords[today].foods.push(food)
+  saveData()
+  renderToday()
+  closeModal()
+  //清空输入
+  document.getElementById("food-name").value=""
+  document.getElementById("food-w").value=""
+  document.getElementById("food-pro").value=""
+  document.getElementById("food-carb").value=""
+  document.getElementById("food-fat").value=""
+}
+function delFood(day,id){
+  const arr = appData.dayRecords[day].foods
+  appData.dayRecords[day].foods = arr.filter(x=>x.id!==id)
+  saveData()
+  renderToday()
+}
+function calcTDEE(){
+  const sex = document.getElementById("sex").value
+  const h = Number(document.getElementById("height").value)
+  const a = Number(document.getElementById("age").value)
+  const act = Number(document.getElementById("activity").value)
+  const proPerKg = Number(document.getElementById("pro-per-kg").value)
+  //取最新体重，没有就默认60
+  let w = appData.weightList.length?appData.weightList[appData.weightList.length-1].weight:60
+  let bmr
+  if(sex==="male") bmr = 10*w + 6.25*h -5*a +5
+  else bmr =10*w +6.25*h -5*a -161
+  const tdee = bmr * act
+  const pro = w * proPerKg
+  const carb = tdee*0.5/4
+  const fat = tdee*0.25/9
+  appData.target = {kcal:Math.round(tdee),pro:pro.toFixed(1),carb:Math.round(carb),fat:Math.round(fat)}
+  document.getElementById("manual-target").value=appData.target.kcal
+  document.getElementById("carb-target").value=appData.target.carb
+  document.getElementById("fat-target").value=appData.target.fat
+  saveData()
+  renderToday()
+  alert("✅ 已自动更新目标热量："+Math.round(tdee)+" kcal\n体重变化后，点这个按钮重新计算即可")
+}
+function saveManualTarget(){
+  appData.target.kcal = Number(document.getElementById("manual-target").value)
+  appData.target.carb = Number(document.getElementById("carb-target").value)
+  appData.target.fat = Number(document.getElementById("fat-target").value)
+  saveData()
+  renderToday()
+  alert("保存成功")
+}
+function saveWeight(){
+  const w = Number(document.getElementById("today-weight").value)
+  if(!w) return alert("填写体重")
+  const exist = appData.weightList.find(x=>x.date===today)
+  if(exist) exist.weight=w
+  else appData.weightList.push({date:today,weight:w})
+  saveData()
+  renderToday()
+  alert("✅ 体重已保存，下次点【自动计算】会用这个体重算热量")
+}
+function renderToday(){
+  const rec = appData.dayRecords[today] || {foods:[]}
+  let sumKcal=0,sumPro=0,sumCarb=0,sumFat=0
+  rec.foods.forEach(f=>{
+    sumKcal+=f.kcal
+    sumPro+=f.pro
+    sumCarb+=f.carb
+    sumFat+=f.fat
+  })
+  const t = appData.target
+  const rate = Math.min(sumKcal/t.kcal,1)
+  const dash = 276.46 * (1-rate)
+  document.getElementById("circle-progress").style.strokeDashoffset = dash
+  document.getElementById("eat-kcal").innerText = Math.round(sumKcal)
+  document.getElementById("target-kcal").innerText = t.kcal+" kcal"
+  document.getElementById("rate-text").innerText = (rate*100).toFixed(1)+"%"
+  const left = t.kcal - sumKcal
+  document.getElementById("left-kcal").innerText = left>0?left+" kcal":"超出"+Math.abs(left)+" kcal"
+  document.getElementById("tip-text").innerText = left>0?`还可以摄入 ${Math.round(left)} kcal`:`已经超出 ${Math.round(-left)} kcal`
+  //宏量进度
+  document.getElementById("pro-text").innerText = `${sumPro.toFixed(1)} / ${t.pro} g`
+  document.getElementById("pro-bar").style.width = Math.min(sumPro/t.pro*100,100)+"%"
+  document.getElementById("carb-text").innerText = `${sumCarb.toFixed(1)} / ${t.carb} g`
+  document.getElementById("carb-bar").style.width = Math.min(sumCarb/t.carb*100,100)+"%"
+  document.getElementById("fat-text").innerText = `${sumFat.toFixed(1)} / ${t.fat} g`
+  document.getElementById("fat-bar").style.width = Math.min(sumFat/t.fat*100,100)+"%"
+  //餐列表
+  const container = document.getElementById("meal-container")
+  const types = [
+    {key:"breakfast",name:"早餐"},
+    {key:"lunch",name:"午餐"},
+    {key:"dinner",name:"晚餐"},
+    {key:"snack",name:"加餐"}
+  ]
+  let html=""
+  types.forEach(ty=>{
+    const items = rec.foods.filter(f=>f.type===ty.key)
+    if(items.length===0) return
+    let sK=0,sP=0
+    items.forEach(i=>{sK+=i.kcal;sP+=i.pro})
+    html += `<div class="meal-title">${ty.name}<span>${Math.round(sK)} kcal · 蛋白 ${sP.toFixed(0)}g</span></div>`
+    items.forEach(fd=>{
+      html += `
+        <div class="food-item">
+          <div>
+            <div class="food-name">${fd.name}</div>
+            <div class="food-nut">${fd.weight}g｜蛋白${fd.pro.toFixed(1)}g 碳水${fd.carb.toFixed(1)}g 脂肪${fd.fat.toFixed(1)}g</div>
+          </div>
+          <div style="text-align:right">
+            <div class="food-kcal">${Math.round(fd.kcal)}</div>
+            <div class="del-btn" onclick="delFood('${today}',${fd.id})">×</div>
+          </div>
+        </div>
+      `
+    })
+  })
+  container.innerHTML = html
+}
+function renderWeightChart(){
+  const ctx = document.getElementById("weightChart").getContext("2d")
+  const list = [...appData.weightList].sort((a,b)=>new Date(a.date)-new Date(b.date))
+  const labels = list.map(x=>x.date.slice(5))
+  const data = list.map(x=>x.weight)
+  if(chart) chart.destroy()
+  chart = new Chart(ctx,{
+    type:"line",
+    data:{labels,datasets:[{label:"体重kg",data,borderColor:"#ff7b39",backgroundColor:"#ff7b3922",fill:true,tension:0.3}]},
+    options:{responsive:true,maintainAspectRatio:false}
+  })
+}
+function saveData(){localStorage.setItem("dietData",JSON.stringify(appData))}
+function exportCSV(){
+  let txt = "日期,餐次,食物,重量g,蛋白g,碳水g,脂肪g,热量kcal\n"
+  Object.keys(appData.dayRecords).forEach(d=>{
+    appData.dayRecords[d].foods.forEach(f=>{
+      txt += `${d},${f.type},${f.name},${f.weight},${f.pro},${f.carb},${f.fat},${f.kcal}\n`
+    })
+  })
+  const blob = new Blob([txt],{type:"text/csv;charset=utf-8"})
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href=url;a.download="饮食记录.csv";a.click()
+}
+function clearAll(){
+  if(!confirm("确定清空全部记录？无法恢复！")) return
+  localStorage.removeItem("dietData")
+  appData = {info:{sex:"male",height:170,age:24,activity:1.375,proPerKg:1.6},target:{kcal:2000,pro:120,carb:250,fat:70},weightList:[],dayRecords:{}}
+  saveData()
+  renderToday()
+}
+//初始化
+renderToday()
+</script>
+</body>
+</html>
