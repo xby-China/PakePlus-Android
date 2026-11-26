@@ -1,0 +1,20 @@
+{
+  "name": "健康记录",
+  "short_name": "健康记录",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#fcf6ef",
+  "theme_color": "#ff7b39",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
